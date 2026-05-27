@@ -1,6 +1,6 @@
 from affective import Raise
 from sample_app.app.domain import User
-from sample_app.app.effects import SaveUser, ReadUser
+from sample_app.app.effects import UserStorage
 
 
 class UserAlreadyExists(Exception):
@@ -8,8 +8,8 @@ class UserAlreadyExists(Exception):
 
 
 def register_user(name: str):
-    existing = yield ReadUser(name)
+    existing = yield from UserStorage.read_user(name)
     if existing:
-        yield Raise(UserAlreadyExists())
+        yield from Raise.error(UserAlreadyExists())
     user = User(name)
-    yield SaveUser(user)
+    yield from UserStorage.save_user(user)

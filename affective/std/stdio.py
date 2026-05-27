@@ -1,38 +1,36 @@
 import sys
 from collections.abc import Callable
 
-from affective.core.effects import effect, Effect
-from affective.core.handlers import Handler, EffectHandlerFunc
+from affective import operation, handler
+from affective.core.effects import Effect
 from affective.core.continuation import Continuation
 
 
-@effect
-class ReadStdin(Effect[str]):
-    ...
+class Console(Effect):
+    @operation
+    def read(self) -> str: ...
+
+    @operation
+    def write(self, text: str) -> None: ...
 
 
-@effect
-class WriteStdin(Effect[None]):
-    text: str
-
-
-RWStdio = ReadStdin | WriteStdin
-
-
+@handler(Console.write)
 def default_stdout_writer(
-    eff: WriteStdin, then: Callable[[None], Continuation]
+    then: Callable[[None], Continuation], text: str
 ) -> Continuation:
-    sys.stdout.write(eff.text)
+    sys.stdout.write(text)
     sys.stdout.flush()
     ret = yield from then(None)
     return ret
 
 
+@handler(Console.read)
 def default_stdin_reader(
-    eff: ReadStdin, then: Callable[[str], Continuation]
+    then: Callable[[str], Continuation]
 ) -> Continuation:
     ret = yield from then(sys.stdin.readline().removesuffix("\n"))
     return ret
 
 
-default_stdio_handler = Handler(default_stdout_writer, default_stdin_reader)
+default_stdio_handler = default_stdout_writer + default_stdin_reader
+

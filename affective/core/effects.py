@@ -1,26 +1,53 @@
-from collections.abc import Generator, Iterator
+from collections.abc import Generator, Iterator, Callable
 from dataclasses import dataclass
-from typing import Any, dataclass_transform, Self
+from functools import wraps
+from typing import Any, dataclass_transform, Self, Sequence, Mapping
 
 
-@dataclass_transform(frozen_default=True)
-def effect[E](cls: type[E]) -> type[E]:
-    return dataclass(frozen=True, slots=True)(cls)
+@dataclass
+class Perform:
+    effect_type: Any
+    effect_args: Sequence[Any]
+    effect_kwargs: Mapping[str, Any]
 
 
-class Effect[ResultT]:
+class Effect:
     ...
 
 
-@effect
-class Yield(Effect[None]): ...
+def operation[**P, R](f: Callable[P, R]) -> Callable[
+    P, Generator[Perform, Any, Any]
+]:
+    @wraps(f)
+    def wrapper(
+        *args: P.args, **kwargs: P.kwargs
+    ) -> Generator[Perform, Any, R]:
+        ret = yield Perform(wrapper, args, kwargs)
+        return ret
+
+    return wrapper
 
 
-@effect
-class Raise[ExcT: Exception](Effect[None]):
-    error: ExcT
+def errors(
+    *error_types: type[Exception],
+) -> Callable[
+    [Callable[..., Any]],
+    Callable[..., Any],
+]:
+    def decorator[F: Callable[..., Any]](f: F) -> F:
+        existing: tuple[type[Exception], ...] = getattr(
+            f, "__affective_errors__", ()
+        )
+        setattr(f, "__affective_errors__", existing + error_types)
+        return f
+
+    return decorator
 
 
-def perform[ResultT](effect: Effect[ResultT]) -> Iterator[Effect[ResultT]]:
-    return_value = yield effect
-    return return_value
+def get_errors(op: Callable[..., Any]) -> tuple[type[Exception], ...]:
+    return getattr(op, "__affective_errors__", ())
+
+
+class Raise(Effect):
+    @operation
+    def error(self, err: Exception) -> None: ...

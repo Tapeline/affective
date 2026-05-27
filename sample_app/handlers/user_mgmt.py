@@ -1,30 +1,33 @@
 from collections.abc import Callable
 
-from affective.std.stdio import WriteStdin, ReadStdin
+from affective.std.stdio import Console
 from sample_app.app.domain import User
-from sample_app.app.effects import SaveUser, ReadUser
-from affective import Continuation, Handler
+from sample_app.app.effects import UserStorage
+from affective import Continuation, handler
 
 
+@handler(UserStorage.save_user)
 def test_user_saver(
-    eff: SaveUser, then: Callable[[None], Continuation]
+    then: Callable[[None], Continuation], user: User
 ) -> Continuation:
-    yield WriteStdin(f"User {eff.user.name} saved")
+    yield from Console.write(f"User {user.name} saved")
     ret = yield from then(None)
     return ret
 
 
+@handler(UserStorage.read_user)
 def test_user_reader(
-    eff: ReadUser, then: Callable[[User | None], Continuation]
+    then: Callable[[User | None], Continuation], name: str
 ) -> Continuation:
-    yield WriteStdin(f"Does user {eff.name} exist? (y/N)")
-    does_exist = yield ReadStdin()
+    yield from Console.write(f"Does user {name} exist? (y/N)")
+    does_exist = yield from Console.read()
     if does_exist == "y":
-        user = User(eff.name)
+        user = User(name)
     else:
         user = None
     ret = yield from then(user)
     return ret
 
 
-test_user_mgmt_handler = Handler(test_user_saver, test_user_reader)
+test_user_mgmt_handler = test_user_reader + test_user_saver
+

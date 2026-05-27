@@ -1,49 +1,86 @@
-from collections.abc import Callable, Sequence
-from typing import Any
-import inspect
+from collections.abc import Callable, Generator
+from dataclasses import dataclass
+from functools import wraps
+from typing import Any, Concatenate
 
-from affective.core.effects import Effect
+from affective import Raise
+from affective.core.effects import Perform
 from affective.core.continuation import Continuation
 
-type EffectHandlerFunc[EffectResultT, EffectT: Effect[Any]] = Callable[
+
+@dataclass
+class OperationHandlerCollection:
+    handlers: dict[Any, Callable[
+        Concatenate[Callable[[Any], Continuation], Any],
+        Generator[Perform, Any, Any]
+    ]]
+
+    def __add__(
+        self, other: Any
+    ) -> "OperationHandlerCollection":
+        match other:
+            case OperationHandler(op, func):
+                return OperationHandlerCollection(self.handlers | {op: func})
+            case OperationHandlerCollection(handlers):
+                return OperationHandlerCollection(handlers | self.handlers)
+            case _:
+                return NotImplemented
+
+    def __radd__(self, other: Any) -> "OperationHandlerCollection":
+        return self.__add__(other)
+
+
+@dataclass
+class OperationHandler[**P = ..., R = Any]:
+    operation: Any
+    func: Callable[
+        Concatenate[Callable[[R], Continuation], P],
+        Generator[Perform, Any, R]
+    ]
+
+    def __add__(self, other: Any) -> "OperationHandlerCollection":
+        match other:
+            case OperationHandler(op, func):
+                return OperationHandlerCollection(
+                    {op: func, self.operation: self.func}
+                )
+            case _:
+                return NotImplemented
+
+
+def handler[**P, R](
+    eff_op: Callable[P, Generator[Perform, Any, R]]
+) -> Callable[
     [
-        EffectT,
-        Callable[[EffectResultT], Continuation]
+        Callable[
+            Concatenate[Callable[[R], Continuation], P],
+            Generator[Perform, Any, R]
+        ]
     ],
-    Continuation
-]
+    OperationHandler
+]:
+    def wrapper(
+        function: Callable[
+            Concatenate[Callable[[R], Continuation], P],
+            Generator[Perform, Any, R]
+        ]
+    ) -> OperationHandler:
+        return OperationHandler(eff_op, function)
+
+    return wrapper
 
 
-class HandlerImproperlyConfigured(Exception):
-    def __init__(self, handler: Callable[..., Any]) -> None:
-        super().__init__(
-            f"Handler {handler.__qualname__} is improperly configured. "
-            f"First positional parameter should accept an effect"
-        )
-        self.handler = handler
+def catch(
+    on_catch: Callable[
+        [
+            Callable[[], Continuation],
+            Exception
+        ], Continuation
+    ]
+) -> OperationHandler:
+    @handler(Raise.error)
+    def _handler(cont: Callable[[], Continuation], exc: Exception) -> Continuation:
+        ret = yield from on_catch(cont, exc)
+        return ret
 
-
-class Handler:
-    def __init__(self, *handlers: EffectHandlerFunc[Any] | "Handler") -> None:
-        self.handlers: dict[type[Effect[Any]], EffectHandlerFunc[Any]] = {}
-        for handler in handlers:
-            match handler:
-                case Handler():
-                    for effect, handler in handler.handlers.items():
-                        self.handlers[effect] = handler
-                case _:
-                    effect_t = _resolve_effect_t(handler)
-                    self.handlers[effect_t] = handler
-
-
-def _resolve_effect_t(handler: Callable[..., Any]) -> type[Any]:
-    first_positional = next(
-        (
-            param for param in inspect.signature(handler).parameters.values()
-            if param.kind in {inspect.Parameter.POSITIONAL_ONLY,
-            inspect.Parameter.POSITIONAL_OR_KEYWORD}
-        ), None
-    )
-    if not first_positional:
-        raise HandlerImproperlyConfigured(handler)
-    return first_positional.annotation
+    return _handler
