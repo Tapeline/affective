@@ -1,5 +1,6 @@
 from affective.core.effects import Effect as Effect
 from affective.core.effects import Yield as Yield
+from affective.core.effects import Raise as Raise
 from affective.core.effects import effect as effect
 from affective.core.effects import perform as perform
 from affective.core.continuation import Continuation as Continuation

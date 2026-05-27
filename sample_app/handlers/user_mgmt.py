@@ -19,7 +19,7 @@ def test_user_reader(
 ) -> Continuation:
     yield WriteStdin(f"Does user {eff.name} exist? (y/N)")
     does_exist = yield ReadStdin()
-    if does_exist:
+    if does_exist == "y":
         user = User(eff.name)
     else:
         user = None

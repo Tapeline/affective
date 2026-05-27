@@ -18,9 +18,10 @@ def main():
 
 
 if __name__ == "__main__":
-    run(
-        handle(
+    h = handle(
             Handler(default_stdio_handler, test_user_mgmt_handler),
             main(),
         )
+    run(
+        h
     )

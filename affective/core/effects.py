@@ -12,7 +12,13 @@ class Effect[ResultT]:
     ...
 
 
+@effect
 class Yield(Effect[None]): ...
+
+
+@effect
+class Raise[ExcT: Exception](Effect[None]):
+    error: ExcT
 
 
 def perform[ResultT](effect: Effect[ResultT]) -> Iterator[Effect[ResultT]]:

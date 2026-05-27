@@ -1,6 +1,6 @@
 from typing import Any
 
-from affective.core.effects import Effect, Yield
+from affective.core.effects import Effect, Yield, Raise
 from affective.core.handlers import Handler
 from affective.core.continuation import Continuation
 
@@ -35,10 +35,8 @@ def handle(
                     return stop.value
                 return_value = yield from handle(ctx, cont, eff)
                 return return_value
-            return_value = yield from ctx.handlers[effect.__class__](
-                effect, after
-            )
-            return return_value
+            ret = yield from handle(ctx, ctx.handlers[effect.__class__](effect, after))
+            return ret
         else:
             effect_result = yield effect
             try:
@@ -56,6 +54,8 @@ def run(cont: Continuation) -> Any:
             match effect:
                 case Yield():
                     effect = cont.send(None)
+                case Raise(exc):
+                    raise exc
                 case _:
                     raise UnhandledEffect(effect)
     except StopIteration as stop:
