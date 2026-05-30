@@ -5,7 +5,7 @@ from affective.core.handlers import (
     OperationHandlerCollection,
     OperationHandler,
 )
-from affective.core.continuation import Continuation
+from affective.core.continuation import RunningContinuation
 
 
 class UnhandledEffect(Exception):
@@ -18,7 +18,7 @@ class UnhandledEffect(Exception):
 
 def handle(
     ctx: OperationHandlerCollection | OperationHandler,
-    cont: Continuation,
+    cont: RunningContinuation,
     effect: Perform | None = None,
 ) -> Any:
     if isinstance(ctx, OperationHandler):
@@ -56,7 +56,7 @@ def handle(
             return return_value
 
 
-def run(cont: Continuation) -> Any:
+def run(cont: RunningContinuation) -> Any:
     try:
         effect = next(cont)
         while True:

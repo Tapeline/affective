@@ -3,21 +3,23 @@ from collections.abc import Callable
 
 from affective import operation, handler
 from affective.core.effects import Effect
-from affective.core.continuation import Continuation
+from affective.core.continuation import Continuation, RunningContinuation
 
 
 class Console(Effect):
+    @staticmethod
     @operation
-    def read(self) -> str: ...
+    def read() -> str: ...
 
+    @staticmethod
     @operation
-    def write(self, text: str) -> None: ...
+    def write(text: str) -> None: ...
 
 
 @handler(Console.write)
 def default_stdout_writer(
-    then: Callable[[None], Continuation], text: str
-) -> Continuation:
+    then: Continuation[[None]], text: str
+) -> RunningContinuation:
     sys.stdout.write(text)
     sys.stdout.flush()
     ret = yield from then(None)
@@ -26,8 +28,8 @@ def default_stdout_writer(
 
 @handler(Console.read)
 def default_stdin_reader(
-    then: Callable[[str], Continuation]
-) -> Continuation:
+    then: Continuation[[str]]
+) -> RunningContinuation:
     ret = yield from then(sys.stdin.readline().removesuffix("\n"))
     return ret
 

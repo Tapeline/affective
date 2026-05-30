@@ -1,20 +1,31 @@
-from affective import run, handle, Continuation, catch
+from typing import Any
+
+from affective import (
+    run,
+    handle,
+    Continuation,
+    RunningContinuation,
+    catch,
+    Affects,
+)
 from affective.std.stdio import default_stdio_handler, Console
+from sample_app.app.effects import UserStorage
 
 from sample_app.app.usecase import register_user
 from sample_app.handlers.user_mgmt import test_user_mgmt_handler
 
 
-def ask_for_name():
+def ask_for_name() -> Affects[str, Console]:
     yield from Console.write("What is your name? ")
-    name = yield from Console.read()
+    name: str = yield from Console.read()
     return name
 
 
-def main():
+def main() -> Affects[None, Console | UserStorage]:
     name = yield from ask_for_name()
+
     @catch
-    def catch_error(_, err: Exception) -> Continuation:
+    def catch_error(_: Continuation[...], err: Exception) -> RunningContinuation:
         ret = yield from Console.write(f"Error! {err!r}, aborting.")
         return ret
 

@@ -5,13 +5,13 @@ from typing import Any, Concatenate
 
 from affective import Raise
 from affective.core.effects import Perform
-from affective.core.continuation import Continuation
+from affective.core.continuation import Continuation, RunningContinuation
 
 
 @dataclass
 class OperationHandlerCollection:
     handlers: dict[Any, Callable[
-        Concatenate[Callable[[Any], Continuation], Any],
+        ...,
         Generator[Perform, Any, Any]
     ]]
 
@@ -34,7 +34,7 @@ class OperationHandlerCollection:
 class OperationHandler[**P = ..., R = Any]:
     operation: Any
     func: Callable[
-        Concatenate[Callable[[R], Continuation], P],
+        Concatenate[Continuation[[R]], P],
         Generator[Perform, Any, R]
     ]
 
@@ -53,7 +53,7 @@ def handler[**P, R](
 ) -> Callable[
     [
         Callable[
-            Concatenate[Callable[[R], Continuation], P],
+            Concatenate[Continuation[[R]], P],
             Generator[Perform, Any, R]
         ]
     ],
@@ -61,7 +61,7 @@ def handler[**P, R](
 ]:
     def wrapper(
         function: Callable[
-            Concatenate[Callable[[R], Continuation], P],
+            Concatenate[Continuation[[R]], P],
             Generator[Perform, Any, R]
         ]
     ) -> OperationHandler:
@@ -70,17 +70,17 @@ def handler[**P, R](
     return wrapper
 
 
-def catch(
-    on_catch: Callable[
-        [
-            Callable[[], Continuation],
-            Exception
-        ], Continuation
-    ]
+def catch[
+    R,
+    ThenContT: Continuation[...]
+](
+    on_catch: Continuation[[ThenContT, Exception]]
 ) -> OperationHandler:
-    @handler(Raise.error)
-    def _handler(cont: Callable[[], Continuation], exc: Exception) -> Continuation:
-        ret = yield from on_catch(cont, exc)
+    @handler(Raise.error)  # type: ignore
+    def _handler(
+        cont: ThenContT, exc: Exception
+    ) -> Generator[Perform, R, R]:
+        ret: R = yield from on_catch(cont, exc)
         return ret
 
     return _handler

@@ -1,7 +1,7 @@
 from collections.abc import Generator, Iterator, Callable
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, dataclass_transform, Self, Sequence, Mapping
+from typing import Annotated, Any, dataclass_transform, Self, Sequence, Mapping
 
 
 @dataclass
@@ -21,7 +21,7 @@ def operation[**P, R](f: Callable[P, R]) -> Callable[
     @wraps(f)
     def wrapper(
         *args: P.args, **kwargs: P.kwargs
-    ) -> Generator[Perform, Any, R]:
+    ) -> Generator[Perform, R, R]:
         ret = yield Perform(wrapper, args, kwargs)
         return ret
 
@@ -48,6 +48,12 @@ def get_errors(op: Callable[..., Any]) -> tuple[type[Exception], ...]:
     return getattr(op, "__affective_errors__", ())
 
 
-class Raise(Effect):
+class Raise[ExcT: Exception](Effect):
+    @staticmethod
     @operation
-    def error(self, err: Exception) -> None: ...
+    def error(err: ExcT) -> None: ...
+
+
+type Affects[ReturnT, Effects] = Annotated[
+    Generator[Perform, Any, ReturnT], Effects
+]

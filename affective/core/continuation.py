@@ -1,5 +1,5 @@
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from typing import Any
 
-type Continuation = Generator[Any, Any, Any]
-
+type Continuation[**ExpectsInput] = Callable[ExpectsInput, RunningContinuation]
+type RunningContinuation = Generator[Any, Any, Any]
