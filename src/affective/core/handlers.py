@@ -1,11 +1,10 @@
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
-from functools import wraps
 from typing import Any, Concatenate
 
 from affective import Raise
 from affective.core.effects import Perform
-from affective.core.continuation import Continuation, RunningContinuation
+from affective.core.continuation import Continuation
 
 
 @dataclass

@@ -3,8 +3,6 @@ from affective.core.effects import Raise as Raise
 from affective.core.effects import Affects as Affects
 from affective.core.handlers import catch as catch
 from affective.core.effects import operation as operation
-from affective.core.effects import errors as errors
-from affective.core.effects import get_errors as get_errors
 from affective.core.continuation import \
     RunningContinuation as RunningContinuation
 from affective.core.continuation import Continuation as Continuation
