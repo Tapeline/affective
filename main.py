@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, reveal_type
 
 from affective import (
     run,
@@ -17,7 +17,7 @@ from sample_app.handlers.user_mgmt import test_user_mgmt_handler
 
 def ask_for_name() -> Affects[str, Console]:
     yield from Console.write("What is your name? ")
-    name: str = yield from Console.read()
+    name = yield from Console.read()
     return name
 
 
@@ -26,8 +26,7 @@ def main() -> Affects[None, Console | UserStorage]:
 
     @catch
     def catch_error(_: Continuation[...], err: Exception) -> RunningContinuation:
-        ret = yield from Console.write(f"Error! {err!r}, aborting.")
-        return ret
+        yield from Console.write(f"Error! {err!r}, aborting.")
 
     yield from handle(catch_error, register_user(name))
 

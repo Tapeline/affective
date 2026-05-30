@@ -1,17 +1,13 @@
 import sys
-from collections.abc import Callable
 
-from affective import operation, handler
-from affective.core.effects import Effect
+from affective import operation, handler, Effect
 from affective.core.continuation import Continuation, RunningContinuation
 
 
 class Console(Effect):
-    @staticmethod
     @operation
     def read() -> str: ...
 
-    @staticmethod
     @operation
     def write(text: str) -> None: ...
 
@@ -35,4 +31,3 @@ def default_stdin_reader(
 
 
 default_stdio_handler = default_stdout_writer + default_stdin_reader
-
