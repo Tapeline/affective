@@ -23,7 +23,9 @@ def main() -> Affects[None, Console | UserStorage]:
     name = yield from ask_for_name()
 
     @catch
-    def catch_error(_: Continuation[...], err: Exception) -> RunningContinuation:
+    def catch_error(
+        _: Continuation[...], err: Exception
+    ) -> Affects[None, Console]:
         yield from Console.write(f"Error! {err!r}, aborting.")
 
     yield from handle(catch_error, register_user(name))

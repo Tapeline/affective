@@ -1,6 +1,7 @@
 import sys
+from typing import Any
 
-from affective import operation, handler, Effect
+from affective import operation, handler, Effect, Affects
 from affective.core.continuation import Continuation, RunningContinuation
 
 
@@ -15,7 +16,7 @@ class Console(Effect):
 @handler(Console.write)
 def default_stdout_writer(
     then: Continuation[[None]], text: str
-) -> RunningContinuation:
+) -> Affects[Any]:
     sys.stdout.write(text)
     sys.stdout.flush()
     ret = yield from then(None)
@@ -25,7 +26,7 @@ def default_stdout_writer(
 @handler(Console.read)
 def default_stdin_reader(
     then: Continuation[[str]]
-) -> RunningContinuation:
+) -> Affects[Any]:
     ret = yield from then(sys.stdin.readline().removesuffix("\n"))
     return ret
 

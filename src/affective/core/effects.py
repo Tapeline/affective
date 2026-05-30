@@ -42,6 +42,6 @@ class Raise[ExcT: Exception](Effect):
     def error[_ExcT: Exception](err: _ExcT) -> None: ...
 
 
-type Affects[ReturnT, Effects] = Annotated[
+type Affects[ReturnT, Effects = None] = Annotated[
     Generator[Perform, Any, ReturnT], Effects
 ]
