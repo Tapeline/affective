@@ -2,7 +2,7 @@ from collections.abc import Generator, Callable
 from dataclasses import dataclass
 from functools import wraps
 from typing import (
-    Annotated, Any, Sequence,
+    Annotated, Any, Awaitable, Sequence,
     Mapping,
 )
 
@@ -24,6 +24,11 @@ class _StaticGeneratorMethod[T]:
         raise NotImplementedError
 
 
+@dataclass
+class ImplicitRaise:
+    exc: Exception
+
+
 def operation[**P, R](f: Callable[P, R]) -> _StaticGeneratorMethod[
     Callable[P, Generator[Perform, Any, R]]
 ]:
@@ -32,6 +37,8 @@ def operation[**P, R](f: Callable[P, R]) -> _StaticGeneratorMethod[
         *args: P.args, **kwargs: P.kwargs
     ) -> Generator[Perform, R, R]:
         ret = yield Perform(wrapper, args, kwargs)
+        if ret.__class__ is ImplicitRaise:
+            yield from Raise.error(ret.exc)
         return ret
 
     return wrapper  # type: ignore
@@ -40,6 +47,11 @@ def operation[**P, R](f: Callable[P, R]) -> _StaticGeneratorMethod[
 class Raise[ExcT: Exception](Effect):
     @operation
     def error[_ExcT: Exception](err: _ExcT) -> None: ...
+
+
+class Async(Effect):
+    @operation
+    def wait[T](coro: Awaitable[T]) -> T: ...
 
 
 type Affects[ReturnT, Effects = None] = Annotated[

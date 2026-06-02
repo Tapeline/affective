@@ -1,6 +1,6 @@
 from typing import Any
 
-from affective.core.effects import Raise, Perform
+from affective.core.effects import Async, ImplicitRaise, Raise, Perform
 from affective.core.handlers import (
     OperationHandlerCollection,
     OperationHandler,
@@ -64,6 +64,33 @@ def run(cont: RunningContinuation) -> Any:
                 raise TypeError(f"Unknown yield: {effect}")
             if effect.effect_type == Raise.error:
                 raise effect.effect_args[0]
+            else:
+                raise UnhandledEffect(effect)
+    except StopIteration as stop:
+        return stop.value
+
+
+async def arun(cont: RunningContinuation) -> Any:
+    try:
+        effect = next(cont)
+        while True:
+            if not isinstance(effect, Perform):
+                raise TypeError(f"Unknown yield: {effect}")
+            if effect.effect_type == Raise.error:
+                raise effect.effect_args[0]
+            elif effect.effect_type == Async.wait:
+                try:
+                    result = await effect.effect_args[0]
+                except Exception as exc:
+                    try:
+                        effect = cont.send(ImplicitRaise(exc))
+                    except StopIteration as stop:
+                        return stop.value
+                else:
+                    try:
+                        effect = cont.send(result)
+                    except StopIteration as stop:
+                        return stop
             else:
                 raise UnhandledEffect(effect)
     except StopIteration as stop:

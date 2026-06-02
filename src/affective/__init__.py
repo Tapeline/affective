@@ -1,5 +1,6 @@
 from affective.core.effects import Effect as Effect
 from affective.core.effects import Raise as Raise
+from affective.core.effects import Async as Async
 from affective.core.effects import Affects as Affects
 from affective.core.handlers import catch as catch
 from affective.core.effects import operation as operation

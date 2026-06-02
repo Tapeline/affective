@@ -9,3 +9,8 @@ class UserStorage(Effect):
 
     @operation
     def save_user(user: User) -> None: ...
+
+
+class MemeFetcher(Effect):
+    @operation
+    def get_joke() -> str: ...

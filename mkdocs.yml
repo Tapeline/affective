@@ -1,0 +1,86 @@
+site_name: Affective docs
+nav:
+  - Home: index.md
+  - Learning:
+      - Overview: learn/overview.md
+      - Continuations: learn/continuations.md
+      - Effects: learn/effects.md
+      - Effectful programs: learn/effectful.md
+      - Effect loop: learn/loop.md
+  - Reference:
+      - core:
+          - continuation: api/core/continuation.md
+          - effects: api/core/effects.md
+          - handlers: api/core/handlers.md
+          - loop: api/core/loop.md
+      - std:
+          - stdio: api/std/stdio.md
+  - Case studies: cases/index.md
+
+theme:
+  # took that from faststream
+  name: material
+  font:
+    text: Roboto
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - search.suggest
+    - search.highlight
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.tracking     e url
+    - navigation.prune
+    - navigation.top
+    - navigation.footer
+    - navigation.path
+    - content.tabs.link
+    - content.tooltips
+    - content.code.copy
+    - content.code.annotate
+    - content.code.select
+    - content.action.edit
+
+plugins:
+  # - macros:
+  #     module_name: macros
+  - autorefs
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+
+markdown_extensions:
+  - toc:
+      permalink: "#"             # replace TOC block symbol
+      toc_depth: 3
+  - mdx_include:
+      base_path: .
+      line_slice_separator: [ ]
+  - extra
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - def_list

@@ -11,7 +11,7 @@ from sample_app.app.effects import UserStorage
 def test_user_saver(
     then: Continuation[[None]], user: User
 ) -> Affects[Any, Console]:
-    yield from Console.write(f"User {user.name} saved")
+    yield from Console.write(f"User {user.name} saved\n")
     ret = yield from then(None)
     return ret
 

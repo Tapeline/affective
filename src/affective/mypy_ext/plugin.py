@@ -12,7 +12,8 @@ def abstractise_effects(ctx: ClassDefContext) -> None:
 
 class AffectivePlugin(Plugin):
     def get_base_class_hook(self, fullname: str) -> Optional[
-        Callable[[ClassDefContext], None]]:
+        Callable[[ClassDefContext], None]
+    ]:
         if fullname == "affective.core.effects.Effect":
             return abstractise_effects
         return None
