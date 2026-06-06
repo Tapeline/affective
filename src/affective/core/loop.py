@@ -1,6 +1,6 @@
 from typing import Any
 
-from affective.core.effects import Async, ImplicitRaise, Raise, Perform
+from affective.core.effects import Async, Raise, Perform
 from affective.core.handlers import (
     OperationHandlerCollection,
     OperationHandler,
@@ -83,7 +83,7 @@ async def arun(cont: RunningContinuation) -> Any:
                     result = await effect.effect_args[0]
                 except Exception as exc:
                     try:
-                        effect = cont.send(ImplicitRaise(exc))
+                        effect = cont.send(Perform(Raise.error, [exc], {}))
                     except StopIteration as stop:
                         return stop.value
                 else:

@@ -18,8 +18,6 @@ def handle_get_joke(
         headers={"X-Api-Key": API_KEY}
     )
     if response.status_code != 200:
-        # TODO: explicitly mark what errors might effects give and make
-        #       use of ImplicitRaise here
         joke = "No joke for you, sorry"
     else:
         joke =  json.loads(response.data.decode("utf-8"))[0]["joke"]
