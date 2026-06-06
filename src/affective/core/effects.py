@@ -3,11 +3,12 @@ from dataclasses import dataclass
 from functools import wraps
 from typing import (
     Annotated, Any, Awaitable, Sequence,
-    Mapping,
+    Mapping, final, cast, TypeVar
 )
 
 
 @dataclass
+@final
 class Perform:
     effect_type: Any
     effect_args: Sequence[Any]
@@ -24,17 +25,17 @@ class _StaticGeneratorMethod[T]:
         raise NotImplementedError
 
 
-def operation[**P, R](f: Callable[P, R]) -> _StaticGeneratorMethod[
+def operation[**P, R](f: Callable[P, Affects[R]]) -> _StaticGeneratorMethod[
     Callable[P, Generator[Perform, Any, R]]
 ]:
     @wraps(f)
     def wrapper(
         *args: P.args, **kwargs: P.kwargs
-    ) -> Generator[Perform, R, R]:
+    ) -> Generator[Perform, R | Perform, R]:
         ret = yield Perform(wrapper, args, kwargs)
         while ret.__class__ is Perform:
             ret = yield ret
-        return ret
+        return cast(R, ret)
 
     return wrapper  # type: ignore
 

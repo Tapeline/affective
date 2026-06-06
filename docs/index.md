@@ -21,7 +21,7 @@ Write efficient and expressive side effects in Python.
     - [Effects](learn/effects.md)
     - [Effectful programs](learn/effectful.md)
     - [Effect loop](learn/loop.md)
-    - [Advantages](learn/pros.md)
+    - [Pros & Cons](learn/pros-and-cons.md)
 
 
 -   **Looking for usecases?**
@@ -41,6 +41,11 @@ Write efficient and expressive side effects in Python.
     
     - [Affective Core](api/core/continuation.md)
     - [Affective Standard Effects](api/std/stdio.md)
+
+    Or refer to static checking:
+
+    - [Using mypy plugin](checking/mypy.md)
+    - [Checking effects](checking/effects.md)
 
 </div>
 

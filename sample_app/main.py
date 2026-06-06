@@ -1,10 +1,8 @@
 import asyncio
 
 from affective import (
-    run,
     handle,
     Continuation,
-    RunningContinuation,
     catch,
     Affects,
 )

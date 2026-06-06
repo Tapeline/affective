@@ -4,7 +4,7 @@ from typing import Any
 
 try:
     from aiohttp.web_response import Response
-    from aiohttp import ClientSession
+    from aiohttp import ClientSession, ClientTimeout
 except ImportError as exc:
     raise ImportError(
         "Cannot use Http effects without [aiohttp] extra"
@@ -52,7 +52,8 @@ def _async_request_handler(
                 params=params,
                 data=data,
                 headers=headers,
-                timeout=timeout_s,
+                timeout=ClientTimeout(timeout_s)
+                if timeout_s is not None else None,
                 raise_for_status=False,
             ) as response
         ):
