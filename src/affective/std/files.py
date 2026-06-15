@@ -21,13 +21,15 @@ def _handle_default_write(
     path: str,
     contents: bytes
 ) -> Affects[Any]:
-    try:
-        with open(path, "wb") as f:
-            f.write(contents)
-    except PermissionError as exc:
-        yield from Raise.error(exc)
-    ret = yield from then(None)
-    return ret
+    def h():
+        try:
+            with open(path, "wb") as f:
+                f.write(contents)
+        except Exception as exc:
+            yield from Raise.error(exc)
+        ret = yield from then(None)
+        return ret
+    return (yield from then(h))
 
 
 @handler(Files.read)
@@ -35,14 +37,17 @@ def _handle_default_read(
     then: Continuation[[bytes]],
     path: str,
 ) -> Affects[Any]:
-    try:
-        with open(path, "rb") as f:
+    def h():
+        try:
+            f = open(path, "rb")
             contents = f.read()
-    except PermissionError as exc:
-        yield from Raise.error(exc)
-    else:
-        ret = yield from then(contents)
-        return ret
+            f.close()
+        except Exception as exc:
+            yield from Raise.error(exc)
+        else:
+            ret = yield from then(contents)
+            return ret
+    return (yield from then(h))
 
 
 default_files_handler = _handle_default_read + _handle_default_write

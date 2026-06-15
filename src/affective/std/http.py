@@ -43,33 +43,35 @@ def _async_request_handler(
     headers: dict[str, str] | None = None,
     timeout_s: float | None = None,
 ) -> Affects[Any, Async]:
-    async def _do() -> HttpResponse:
-        async with (
-            ClientSession() as session,
-            session.request(
-                method=method,
-                url=url,
-                params=params,
-                data=data,
-                headers=headers,
-                timeout=ClientTimeout(timeout_s)
-                if timeout_s is not None else None,
-                raise_for_status=False,
-            ) as response
-        ):
-            response_data = await response.read()
-            return HttpResponse(
-                status_code=response.status,
-                data=response_data,
-                headers={
-                    header: value
-                    for header, value in response.headers.items()
-                },
-            )
+    def h():
+        async def _do() -> HttpResponse:
+            async with (
+                ClientSession() as session,
+                session.request(
+                    method=method,
+                    url=url,
+                    params=params,
+                    data=data,
+                    headers=headers,
+                    timeout=ClientTimeout(timeout_s)
+                    if timeout_s is not None else None,
+                    raise_for_status=False,
+                ) as response
+            ):
+                response_data = await response.read()
+                return HttpResponse(
+                    status_code=response.status,
+                    data=response_data,
+                    headers={
+                        header: value
+                        for header, value in response.headers.items()
+                    },
+                )
 
-    result = yield from Async.wait(_do())
-    ret = yield from then(result)
-    return ret
+        result = yield from Async.wait(_do())
+        ret = yield from then(result)
+        return ret
+    return (yield from then(h))
 
 
 async_http_handler = _async_request_handler

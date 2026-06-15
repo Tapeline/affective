@@ -32,10 +32,12 @@ def operation[**P, R](f: Callable[P, Affects[R]]) -> _StaticGeneratorMethod[
     def wrapper(
         *args: P.args, **kwargs: P.kwargs
     ) -> Generator[Perform, R | Perform, R]:
-        ret = yield Perform(wrapper, args, kwargs)
-        while ret.__class__ is Perform:
-            ret = yield ret
-        return cast(R, ret)
+        # ret = yield Perform(wrapper, args, kwargs)
+        # while ret.__class__ is Perform:
+        #     ret = yield ret
+        # return cast(R, ret)
+        cap = yield Perform(wrapper, args, kwargs)
+        return (yield from cap())
 
     return wrapper  # type: ignore
 

@@ -17,18 +17,22 @@ class Console(Effect):
 def default_stdout_writer(
     then: Continuation[[None]], text: str
 ) -> Affects[Any]:
-    sys.stdout.write(text)
-    sys.stdout.flush()
-    ret = yield from then(None)
-    return ret
+    def h():
+        sys.stdout.write(text)
+        sys.stdout.flush()
+        ret = yield from then(None)
+        return ret
+    return (yield from then(h))
 
 
 @handler(Console.read)
 def default_stdin_reader(
     then: Continuation[[str]]
 ) -> Affects[Any]:
-    ret = yield from then(sys.stdin.readline().removesuffix("\n"))
-    return ret
+    def h():
+        ret = yield from then(sys.stdin.readline().removesuffix("\n"))
+        return ret
+    return (yield from then(h))
 
 
 default_stdio_handler = default_stdout_writer + default_stdin_reader
