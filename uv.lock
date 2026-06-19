@@ -7,12 +7,13 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "affective"
+name = "affective-py"
 version = "0.1.0"
 source = { editable = "." }
-dependencies = [
+
+[package.optional-dependencies]
+aiohttp = [
     { name = "aiohttp" },
-    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -31,10 +32,8 @@ docs = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "aiohttp", specifier = ">=3.13.5" },
-    { name = "requests", specifier = ">=2.34.2" },
-]
+requires-dist = [{ name = "aiohttp", marker = "extra == 'aiohttp'", specifier = ">=3.13.5" }]
+provides-extras = ["aiohttp"]
 
 [package.metadata.requires-dev]
 dev = [
