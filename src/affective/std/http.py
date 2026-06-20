@@ -20,7 +20,7 @@ class HttpResponse:
     headers: dict[str, str]
 
 
-class Http(Effect):
+class Http:
     @operation
     def request(
         method: str,
@@ -35,7 +35,6 @@ class Http(Effect):
 
 @handler(Http.request)
 def _async_request_handler(
-    then: Continuation[[HttpResponse]],
     method: str,
     url: str,
     params: str | dict[str, Any] | None = None,
@@ -67,9 +66,7 @@ def _async_request_handler(
                 },
             )
 
-    result = yield from Async.wait(_do())
-    ret = yield from then(result)
-    return ret
+    return (yield from Async.wait(_do()))
 
 
 async_http_handler = _async_request_handler

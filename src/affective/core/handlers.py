@@ -2,13 +2,13 @@ from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from typing import Any, Concatenate
 
-from affective import Raise
-from affective.core.effects import Perform
-from affective.core.continuation import Continuation
 
+from affective.core.types import Perform
 
 @dataclass
 class OperationHandlerCollection:
+    """A collection of handlers."""
+    
     handlers: dict[Any, Callable[
         ...,
         Generator[Perform, Any, Any]
@@ -22,6 +22,8 @@ class OperationHandlerCollection:
                 return OperationHandlerCollection(self.handlers | {op: func})
             case OperationHandlerCollection(handlers):
                 return OperationHandlerCollection(handlers | self.handlers)
+            case None:
+                return self
             case _:
                 return NotImplemented
 
@@ -33,7 +35,7 @@ class OperationHandlerCollection:
 class OperationHandler[**P = ..., R = Any]:
     operation: Any
     func: Callable[
-        Concatenate[Continuation[[R]], P],
+        Concatenate[Callable[[R], Generator[Any, Any, Any]], P],
         Generator[Perform, Any, R]
     ]
 
@@ -46,40 +48,3 @@ class OperationHandler[**P = ..., R = Any]:
             case _:
                 return NotImplemented
 
-
-def handler[**P, R](
-    eff_op: Callable[P, Generator[Perform, Any, R]]
-) -> Callable[
-    [
-        Callable[
-            Concatenate[Continuation[[R]], P],
-            Generator[Perform, Any, R]
-        ]
-    ],
-    OperationHandler
-]:
-    def wrapper(
-        function: Callable[
-            Concatenate[Continuation[[R]], P],
-            Generator[Perform, Any, R]
-        ]
-    ) -> OperationHandler:
-        return OperationHandler(eff_op, function)
-
-    return wrapper
-
-
-def catch[
-    R,
-    ThenContT: Continuation[...]
-](
-    on_catch: Continuation[[ThenContT, Exception]]
-) -> OperationHandler:
-    @handler(Raise.error)  # type: ignore
-    def _handler(
-        cont: ThenContT, exc: Exception
-    ) -> Generator[Perform, R, R]:
-        ret: R = yield from on_catch(cont, exc)
-        return ret
-
-    return _handler

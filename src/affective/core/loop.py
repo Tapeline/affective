@@ -1,97 +1,84 @@
-from typing import Any
-
-from affective.core.effects import Async, Raise, Perform
-from affective.core.handlers import (
-    OperationHandlerCollection,
-    OperationHandler,
-)
-from affective.core.continuation import RunningContinuation
+from typing import cast, Any
+from collections.abc import Generator
+from affective.core.handlers import OperationHandler, OperationHandlerCollection
+from affective.core.types import Affects, Perform
+from affective.core.effects import Raise, Async
 
 
 class UnhandledEffect(Exception):
+    """Thrown directly when an effect is not handled by any context."""
     def __init__(self, effect: Perform):
         super().__init__(
-            f"Effect handler for {effect.effect_type.__qualname__} not found"
+            f"Effect handler for {effect.type.__qualname__} not found"
         )
         self.effect = effect
 
 
-def handle(
-    ctx: OperationHandlerCollection | OperationHandler,
-    cont: RunningContinuation,
-    effect: Perform | None = None,
-) -> Any:
-    if isinstance(ctx, OperationHandler):
-        ctx = OperationHandlerCollection({ctx.operation: ctx.func})
-    if effect is None:
-        try:
-            effect = next(cont)
-        except StopIteration as stop:
-            return stop.value
+def handle[R](
+    gen: Generator[tuple[Perform, OperationHandlerCollection | None], Any, R], 
+    ctx: OperationHandler | OperationHandlerCollection, 
+    resume_with: Any = None
+) -> R:
+    """
+    Run effectful with handlers.
+    
+    Any unhandled effect will be yielded outwards.
+
+    """
     while True:
-        if not isinstance(effect, Perform):
-            raise TypeError(f"Unknown yield: {effect}")
-        if effect.effect_type in ctx.handlers:
-            def after(effect_result: Any) -> Any:
-                try:
-                    eff = cont.send(effect_result)
-                except StopIteration as stop:
-                    return stop.value
-                return_value = yield from handle(ctx, cont, eff)
-                return return_value
-
-            ret = yield from handle(
-                ctx, ctx.handlers[effect.effect_type](
-                    after, *effect.effect_args, **effect.effect_kwargs
-                )
+        # breakpoint()
+        try:
+            eff, add_ctx = gen.send(resume_with)
+        except StopIteration as stop:
+            return cast(R, stop.value)
+        if eff.type in ctx.handlers:
+            handler = ctx.handlers[eff.type](
+                lambda res: handle(gen, ctx, res), 
+                *eff.args,
+                **eff.kwargs
             )
-            return ret
+            return (yield from handle(handler, ctx + add_ctx))
         else:
-            effect_result = yield effect
+            resume_with = yield eff, ctx + add_ctx
+            continue
+
+
+def run[R](
+    gen: Generator[tuple[Perform, OperationHandlerCollection | None], Any, R]
+) -> R:
+    """Run effectful as main."""
+    while True:
+        try:
+            eff, _ = gen.send(None)
+        except StopIteration as stop:
+            return cast(R, stop.value)
+        if not isinstance(eff, Perform):
+            raise TypeError(f"Unknown yield: {eff}")
+        if eff.type == Raise.error:
+            raise eff.args[0]
+        else:
+            raise UnhandledEffect(eff)
+
+
+async def arun[R](
+    gen: Generator[tuple[Perform, OperationHandlerCollection | None], Any, R]
+) -> R:
+    """Run effectful as main asynchronously."""
+    resume_with = None
+    while True:
+        try:
+            eff, ctx = gen.send(resume_with)
+        except StopIteration as stop:
+            return cast(R, stop.value)
+        if not isinstance(eff, Perform):
+            raise TypeError(f"Unknown yield: {eff}")
+        if eff.type == Raise.error:
+            raise eff.args[0]
+        elif eff.type == Async.wait:
             try:
-                effect = cont.send(effect_result)
-            except StopIteration as stop:
-                return stop.value
-            return_value = yield from handle(ctx, cont, effect)
-            return return_value
-
-
-def run(cont: RunningContinuation) -> Any:
-    try:
-        effect = next(cont)
-        while True:
-            if not isinstance(effect, Perform):
-                raise TypeError(f"Unknown yield: {effect}")
-            if effect.effect_type == Raise.error:
-                raise effect.effect_args[0]
-            else:
-                raise UnhandledEffect(effect)
-    except StopIteration as stop:
-        return stop.value
-
-
-async def arun(cont: RunningContinuation) -> Any:
-    try:
-        effect = next(cont)
-        while True:
-            if not isinstance(effect, Perform):
-                raise TypeError(f"Unknown yield: {effect}")
-            if effect.effect_type == Raise.error:
-                raise effect.effect_args[0]
-            elif effect.effect_type == Async.wait:
-                try:
-                    result = await effect.effect_args[0]
-                except Exception as exc:
-                    try:
-                        effect = cont.send(Perform(Raise.error, [exc], {}))
-                    except StopIteration as stop:
-                        return stop.value
-                else:
-                    try:
-                        effect = cont.send(result)
-                    except StopIteration as stop:
-                        return stop
-            else:
-                raise UnhandledEffect(effect)
-    except StopIteration as stop:
-        return stop.value
+                resume_with = await eff.args[0]
+            except Exception as exc:
+                ...
+                # somehow continue handling with this error
+        else:
+            raise UnhandledEffect(eff)
