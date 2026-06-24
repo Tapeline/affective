@@ -2,3 +2,6 @@
 *.sqlite3
 .idea
 *.egg-info
+__pycache__
+*.pyc
+

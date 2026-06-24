@@ -1,57 +1,25 @@
-from collections.abc import Generator, Callable
-from dataclasses import dataclass
-from functools import wraps
-from typing import (
-    Annotated, Any, Awaitable, Sequence,
-    Mapping, final, cast, TypeVar
-)
+from affective.core.types import Affects
+from affective.core.decorators import operation
+from typing import Awaitable
 
 
-@dataclass
-@final
-class Perform:
-    effect_type: Any
-    effect_args: Sequence[Any]
-    effect_kwargs: Mapping[str, Any]
-
-
-class Effect:
-    ...
-
-
-class _StaticGeneratorMethod[T]:
-    # This is some black magic by mypy & Gemini
-    def __get__(self, instance: Any, owner: type | None = None) -> T:
-        raise NotImplementedError
-
-
-def operation[**P, R](f: Callable[P, Affects[R]]) -> _StaticGeneratorMethod[
-    Callable[P, Generator[Perform, Any, R]]
-]:
-    @wraps(f)
-    def wrapper(
-        *args: P.args, **kwargs: P.kwargs
-    ) -> Generator[Perform, R | Perform, R]:
-        # ret = yield Perform(wrapper, args, kwargs)
-        # while ret.__class__ is Perform:
-        #     ret = yield ret
-        # return cast(R, ret)
-        cap = yield Perform(wrapper, args, kwargs)
-        return (yield from cap())
-
-    return wrapper  # type: ignore
-
-
-class Raise[ExcT: Exception](Effect):
+class Raise[ExcT: Exception]:
+    """Denotes an ability to throw a specific error."""
     @operation
-    def error[_ExcT: Exception](err: _ExcT) -> Affects[None]: ...
+    def error[_ExcT: Exception](err: _ExcT) -> Affects[None]:
+        """Raise an exception in an effectful manner."""
 
 
-class Async(Effect):
+class Async:
+    """Denotes an ability to run and wait for coroutines"""
     @operation
-    def wait[T](coro: Awaitable[T]) -> Affects[T, Raise[Exception]]: ...
+    def wait[T](coro: Awaitable[T]) -> Affects[T, Raise[Exception]]:
+        """
+        Wait for a coroutine to finish.
 
+        Because of an unsafe nature of exceptions,
+        we can never guarantee, that the coroutine will
+        not result in one, hence Async.wait always has
+        a Raise[Exception] side effect.
 
-type Affects[ReturnT, Effects = None] = Annotated[
-    Generator[Perform, Any, ReturnT], Effects
-]
+        """

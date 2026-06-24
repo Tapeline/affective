@@ -2,7 +2,7 @@
 name = "affective-py"
 version = "0.1.0"
 description = "WIP AE in Python"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = []
 
 [project.optional-dependencies]

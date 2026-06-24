@@ -1,11 +1,10 @@
 import sys
 from typing import Any
 
-from affective import operation, handler, Effect, Affects
-from affective.core.continuation import Continuation, RunningContinuation
+from affective import operation, handler, Continue, Affects
 
 
-class Console(Effect):
+class Console:
     @operation
     def read() -> Affects[str]: ...
 
@@ -14,25 +13,14 @@ class Console(Effect):
 
 
 @handler(Console.write)
-def default_stdout_writer(
-    then: Continuation[[None]], text: str
-) -> Affects[Any]:
-    def h():
-        sys.stdout.write(text)
-        sys.stdout.flush()
-        ret = yield from then(None)
-        return ret
-    return (yield from then(h))
+def default_stdout_writer(text: str) -> Affects[None]:
+    sys.stdout.write(text)
+    sys.stdout.flush()
 
 
 @handler(Console.read)
-def default_stdin_reader(
-    then: Continuation[[str]]
-) -> Affects[Any]:
-    def h():
-        ret = yield from then(sys.stdin.readline().removesuffix("\n"))
-        return ret
-    return (yield from then(h))
+def default_stdin_reader() -> Affects[str]:
+    return sys.stdin.s().removesuffix("\n")
 
 
 default_stdio_handler = default_stdout_writer + default_stdin_reader
