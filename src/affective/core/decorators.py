@@ -1,9 +1,14 @@
-from dataclasses import dataclass
-from collections.abc import Mapping, Sequence, Callable, Generator
-from typing import Any, Annotated, Concatenate, Awaitable,cast
-from affective.core.types import Affects, Perform
-from affective.core.handlers import OperationHandler, OperationHandlerCollection
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
+
+from affective.core.types import (
+    Affects,
+    Perform,
+    EffectGen,
+    Handler,
+)
+
 
 class _MakeStatic[T]:
     # This is some black magic by mypy & Gemini
@@ -16,9 +21,7 @@ class _MakeStatic[T]:
 
 def operation[**P, R](
     f: Callable[P, Affects[R]]
-) -> _MakeStatic[
-    Callable[P, Generator[Perform, Any, R]]
-]:
+) -> _MakeStatic[Callable[P, EffectGen[R]]]:
     """
     Makes a method an operation.
 
@@ -29,53 +32,17 @@ def operation[**P, R](
         a function that yields Perform of this operation
 
     """
+
     @wraps(f)
-    def wrapper(
-        *args: P.args, **kwargs: P.kwargs
-    ) -> Generator[Perform, R | Perform, R]:
-        ret = yield Perform(wrapper, args, kwargs), None
-        return cast(R, ret)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> EffectGen[R]:
+        return (yield Perform(wrapper, args, kwargs), {})
 
     return wrapper  # type: ignore
 
 
-def raw_handler[**P, R, SendT](
-    eff_op: Callable[P, Generator[Perform, SendT, R]]
-) -> Callable[
-    [
-        Callable[
-            Concatenate[Callable[[R], Generator[Any, Any, Any]], P],
-            Generator[Perform, SendT, R]
-        ]
-    ],
-    OperationHandler
-]:
-    """
-    Raw handler for an effect operation.
-
-    Exposes k() API for the handler to be able to manually
-    control the resumption of the continuation.
-    The hanlder hence should end with:
-    `return (yield from k(...))`
-
-    """
-    def wrapper(
-        function: Callable[
-            Concatenate[Callable[[R], Generator[Any, Any, Any]], P],
-            Generator[Perform, SendT, R]
-        ]
-    ) -> OperationHandlerCollection:
-        return OperationHandlerCollection({eff_op: function})
-
-    return wrapper
-
-
-def handler[**P, R, SendT](
-    eff_op: Callable[P, Generator[Perform, SendT, R]]
-) -> Callable[
-    [Callable[P, Generator[Perform, SendT, R]]],
-    OperationHandler
-]:
+def handler[**P, R](
+    eff_op: Callable[P, EffectGen[R]]
+) -> Callable[[Callable[P, EffectGen[R]]], Handler]:
     """
     Simple handler for an effect operation.
 
@@ -86,36 +53,44 @@ def handler[**P, R, SendT](
     the return value of the handler.
 
     """
-    def wrapper(
-        function: Callable[P, Generator[Perform, SendT, R]]
-    ) -> OperationHandlerCollection:
-        @raw_handler(eff_op)
+
+    def wrapper(function: Callable[P, EffectGen[R]]) -> Handler:
         def raw_handle_func(
-            k: Callable[[R], Generator[Any, Any, Any]], 
+            k: Callable[[R], EffectGen[Any]],
             *args: P.args, **kwargs: P.kwargs
         ):
-            # breakpoint()
-            res = function(*args, **kwargs)
-            if hasattr(res, "__iter__"):
-                res = yield from res
+            res = yield from function(*args, **kwargs)
             return (yield from k(res))
-        return raw_handle_func
+
+        return {eff_op: raw_handle_func}
 
     return wrapper
 
 
-def catch[
-    R,
-    ThenContT: Callable[..., Any]
-](
-    on_catch: Callable[[ThenContT, Exception], Generator[Any, Any, Any]]
-) -> OperationHandler:
-    from affective.core.effects import Raise
-    @raw_handler(Raise.error)  # type: ignore
-    def _handler(
-        cont: ThenContT, exc: Exception
-    ) -> Generator[Perform, R, R]:
-        ret: R = yield from on_catch(cont, exc)
-        return ret
+def const_handler[**P, R](
+    eff_op: Callable[P, EffectGen[R]]
+) -> Callable[[Callable[P, R]], Handler]:
+    """
+    Simplest handler for an effect operation.
 
-    return _handler
+    Does not expose a raw continuation API, neither allows
+    to yield effects.
+
+    Should be used for yielding values or implementing low-level
+    effects using the imperative API of Python or other libraries.
+    Continuation always resumes exactly once
+    and right after the handler has finished the work with
+    the return value of the handler.
+
+    """
+
+    def wrapper(function: Callable[P, R]) -> Handler:
+        def raw_handle_func(
+            k: Callable[[R], EffectGen[Any]],
+            *args: P.args, **kwargs: P.kwargs
+        ):
+            return (yield from k(function(*args, **kwargs)))
+
+        return {eff_op: raw_handle_func}
+
+    return wrapper

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from logging import Handler
 from typing import Any
+
+from affective import handler
+from affective.core.effects import Effect, Affects
 
 try:
     from aiohttp.web_response import Response
@@ -10,7 +12,7 @@ except ImportError as exc:
         "Cannot use Http effects without [aiohttp] extra"
     ) from exc
 
-from affective import Async, Effect, handler, operation, Continuation, Affects
+from affective import Async, operation
 
 
 @dataclass
@@ -20,7 +22,7 @@ class HttpResponse:
     headers: dict[str, str]
 
 
-class Http:
+class Http(Effect):
     @operation
     def request(
         method: str,

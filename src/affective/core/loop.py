@@ -1,7 +1,6 @@
 from typing import cast, Any
 from collections.abc import Generator
-from affective.core.handlers import OperationHandler, OperationHandlerCollection
-from affective.core.types import Affects, Perform
+from affective.core.types import Affects, Perform, EffectGen
 from affective.core.effects import Raise, Async
 
 
@@ -15,10 +14,10 @@ class UnhandledEffect(Exception):
 
 
 def handle[R](
-    gen: Generator[tuple[Perform, OperationHandlerCollection | None], Any, R], 
-    ctx: OperationHandler | OperationHandlerCollection, 
+    gen: EffectGen[R],
+    ctx: Any,
     resume_with: Any = None
-) -> R:
+) -> EffectGen[R]:
     """
     Run effectful with handlers.
     
@@ -26,26 +25,24 @@ def handle[R](
 
     """
     while True:
-        # breakpoint()
+        # TODO: refactor as trampoline
         try:
             eff, add_ctx = gen.send(resume_with)
         except StopIteration as stop:
             return cast(R, stop.value)
-        if eff.type in ctx.handlers:
-            handler = ctx.handlers[eff.type](
+        if eff.type in ctx:
+            handler = ctx[eff.type](
                 lambda res: handle(gen, ctx, res), 
                 *eff.args,
                 **eff.kwargs
             )
-            return (yield from handle(handler, ctx + add_ctx))
+            return (yield from handle(handler, ctx | add_ctx))
         else:
-            resume_with = yield eff, ctx + add_ctx
+            resume_with = yield eff, ctx | add_ctx
             continue
 
 
-def run[R](
-    gen: Generator[tuple[Perform, OperationHandlerCollection | None], Any, R]
-) -> R:
+def run[R](gen: EffectGen[R]) -> R:
     """Run effectful as main."""
     while True:
         try:
@@ -60,9 +57,7 @@ def run[R](
             raise UnhandledEffect(eff)
 
 
-async def arun[R](
-    gen: Generator[tuple[Perform, OperationHandlerCollection | None], Any, R]
-) -> R:
+async def arun[R](gen: EffectGen[R]) -> R:
     """Run effectful as main asynchronously."""
     resume_with = None
     while True:
@@ -78,7 +73,7 @@ async def arun[R](
             try:
                 resume_with = await eff.args[0]
             except Exception as exc:
-                ...
-                # somehow continue handling with this error
+                raise NotImplementedError
+                # TODO: somehow continue handling with this exc
         else:
             raise UnhandledEffect(eff)

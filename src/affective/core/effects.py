@@ -3,14 +3,17 @@ from affective.core.decorators import operation
 from typing import Awaitable
 
 
-class Raise[ExcT: Exception]:
+class Effect: ...
+
+
+class Raise[ExcT: Exception](Effect):
     """Denotes an ability to throw a specific error."""
     @operation
     def error[_ExcT: Exception](err: _ExcT) -> Affects[None]:
         """Raise an exception in an effectful manner."""
 
 
-class Async:
+class Async(Effect):
     """Denotes an ability to run and wait for coroutines"""
     @operation
     def wait[T](coro: Awaitable[T]) -> Affects[T, Raise[Exception]]:

@@ -1,10 +1,11 @@
 import sys
-from typing import Any
 
-from affective import operation, handler, Continue, Affects
+from affective import operation, handler, Affects
+from affective.core.decorators import const_handler
+from affective.core.effects import Effect
 
 
-class Console:
+class Console(Effect):
     @operation
     def read() -> Affects[str]: ...
 
@@ -12,15 +13,15 @@ class Console:
     def write(text: str) -> Affects[None]: ...
 
 
-@handler(Console.write)
-def default_stdout_writer(text: str) -> Affects[None]:
+@const_handler(Console.write)
+def default_stdout_writer(text: str) -> None:
     sys.stdout.write(text)
     sys.stdout.flush()
 
 
-@handler(Console.read)
-def default_stdin_reader() -> Affects[str]:
-    return sys.stdin.s().removesuffix("\n")
+@const_handler(Console.read)
+def default_stdin_reader() -> str:
+    return sys.stdin.readline().removesuffix("\n")
 
 
-default_stdio_handler = default_stdout_writer + default_stdin_reader
+default_stdio_handler = default_stdout_writer | default_stdin_reader

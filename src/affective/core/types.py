@@ -1,15 +1,6 @@
 from dataclasses import dataclass
 from collections.abc import Mapping, Sequence, Callable, Generator
-from typing import Any, Annotated
-
-
-type ContYield = tuple[Perform, OperationHandlerCollection | None]
-
-
-"""An alias for a convenient effectful function annotation."""
-type Affects[ReturnT, Effects = None, SendT = Any] = Annotated[
-    Generator[ContYield, SendT, ReturnT], Effects
-]
+from typing import Any, Annotated, Concatenate
 
 
 @dataclass
@@ -19,5 +10,9 @@ class Perform:
     args: Sequence[Any]
     kwargs: Mapping[str, Any]
 
-    
-type Continue[InputT] = Callable[[InputT], Generator[ContYield, Any, Any]]
+
+type Yielded = tuple[Perform, Handler]
+type EffectGen[ReturnT] = Generator[Yielded, Any, ReturnT]
+type Affects[ReturnT, Effects = None] = Annotated[EffectGen[ReturnT], Effects]
+type Handler = dict[Any, Callable[Concatenate[Callable[[Any], Any], ...], Generator[Yielded, Any, Any]]]
+type Continue[WithT] = Callable[[WithT], EffectGen[Any]]

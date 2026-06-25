@@ -1,4 +1,5 @@
-from affective import Effect, operation, Affects
+from affective import operation, Affects, Effect
+
 from tasklist.core.model import Task
 
 
